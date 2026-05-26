@@ -3898,3 +3898,203 @@ body {
   border-color: var(--cyan-bright);
   transform: translateY(-1px);
 }
+
+/* ── Mobile Responsive Overrides ── */
+@media (max-width: 768px) {
+  /* Reduce excessive padding constraints to maximize screen space */
+  .auth-form-panel {
+    padding: 16px 8px !important;
+  }
+  
+  .dashboard-root-layout {
+    padding: 12px 8px !important;
+  }
+
+  .dashboard-construction-card {
+    padding: 22px 14px !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .glass-card {
+    padding: 20px 14px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Force vertical alignment on column layouts */
+  .dash-two-columns {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .dash-column {
+    min-width: 100% !important;
+    width: 100% !important;
+    gap: 16px !important;
+  }
+
+  /* Grid layout reflow elements */
+  .dash-stats-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .cost-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .photo-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+    gap: 14px !important;
+  }
+
+  /* Header adjustments for wrap and alignment */
+  .flex-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 14px 16px !important;
+    gap: 12px !important;
+    text-align: center;
+  }
+
+  .brand-logo-section {
+    justify-content: center;
+  }
+
+  .header-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .user-profile-badge {
+    display: inline-flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .logout-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Swipe-scrollable Tab Bar for Contractor */
+  .construction-nav {
+    margin: 15px auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .construction-tabs {
+    justify-content: flex-start !important;
+    white-space: nowrap !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important; /* Firefox */
+    padding: 5px !important;
+    border-radius: var(--radius-md) !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .construction-tabs::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Opera */
+  }
+
+  .construction-tab-btn {
+    flex-shrink: 0 !important;
+    padding: 8px 14px !important;
+    font-size: 0.82rem !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  /* Horizontal scrolling for wide ledger tables */
+  .table-responsive-wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-top: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .expense-table {
+    width: 100% !important;
+    min-width: 500px; /* retain readable cell spacing and enable touch-scrolling */
+  }
+
+  .expense-table th, .expense-table td {
+    padding: 10px 12px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Form edit grids */
+  .edit-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .costs-edit-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Image gallery detail actions wrap */
+  .gallery-photo-card .photo-actions-row {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  /* Lightbox close button layout */
+  .lightbox-img-container {
+    max-width: 95% !important;
+  }
+
+  .close-lightbox-btn {
+    top: 10px !important;
+    right: 10px !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Authentication card container resizing */
+  .auth-form-card {
+    padding: 24px 16px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .brand-name {
+    font-size: 1.6rem !important;
+  }
+
+  .brand-tagline {
+    font-size: 0.78rem !important;
+  }
+
+  .role-switch-container {
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 6px !important;
+  }
+
+  .role-switch-btn {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .role-cards-container {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
