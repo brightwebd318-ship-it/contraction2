@@ -2,6 +2,7 @@
   "name": "my-react-app",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://brightwebd318-ship-it.github.io/contraction2/",
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
     "@testing-library/dom": "^10.4.1",
