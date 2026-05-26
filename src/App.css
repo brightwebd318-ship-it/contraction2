@@ -2786,6 +2786,33 @@ body {
   color: var(--text-primary);
 }
 
+/* New dynamic extra items in itemized list */
+.itemized-li-new {
+  border-left: 2px solid rgba(6, 182, 212, 0.4);
+  padding-left: 8px;
+  background: rgba(6, 182, 212, 0.03);
+  border-radius: 0 4px 4px 0;
+}
+
+.itemized-li-new .item-name {
+  color: var(--cyan-bright);
+}
+
+/* Total row separator shown when extras exist */
+.itemized-total-row {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+[data-theme="light"] .itemized-total-row {
+  border-top-color: rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] .itemized-li-new {
+  background: rgba(6, 182, 212, 0.04);
+}
+
 /* Timeline Vertical style */
 .timeline-v-list {
   display: flex;
@@ -3156,5 +3183,718 @@ body {
 
 
 
+/* ══════════════════════════════════════════════════════════════════════════
+   CLIENT SIDE ENHANCED PANELS
+═══════════════════════════════════════════════════════════════════════════ */
 
+/* ── Add Photo Form (Client Gallery) ── */
+.client-add-photo-form {
+  background: rgba(124, 58, 237, 0.04);
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 18px;
+  animation: fadeInUp 0.3s var(--ease-spring);
+}
 
+.add-photo-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.mode-toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(168, 85, 247, 0.2);
+  background: rgba(124, 58, 237, 0.05);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mode-toggle-btn.active {
+  background: rgba(124, 58, 237, 0.18);
+  border-color: var(--violet-neon);
+  color: var(--violet-neon);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.2);
+}
+
+.mode-toggle-btn:hover:not(.active) {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--text-secondary);
+}
+
+/* ── Cancel mode button variant ── */
+.add-content-btn.cancel-mode {
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: #f87171 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+.add-content-btn.cancel-mode:hover {
+  background: rgba(244, 63, 94, 0.22) !important;
+}
+
+/* ── Client Budget Edit Form ── */
+.client-costs-edit-form {
+  margin-top: 16px;
+  animation: fadeInUp 0.3s var(--ease-spring);
+}
+
+.costs-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.costs-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.costs-edit-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.costs-edit-field input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(168, 85, 247, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+  transition: var(--transition);
+}
+
+.costs-edit-field input:focus {
+  border-color: var(--cyan-bright);
+  background: rgba(6, 182, 212, 0.06);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.12);
+}
+
+.costs-edit-field.budget-field {
+  grid-column: 1 / -1;
+}
+
+.costs-edit-field.budget-field input {
+  font-size: 1.05rem;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.costs-edit-field.budget-field input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.costs-edit-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.87rem;
+  color: var(--text-secondary);
+}
+
+.costs-edit-preview strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+[data-theme="light"] .costs-edit-field input {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #1a1a2e;
+}
+
+/* ── Timeline Delete Button ── */
+.client-timeline-item .timeline-v-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timeline-delete-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(244, 63, 94, 0.6);
+  font-size: 0.65rem;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.timeline-delete-btn:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: #f43f5e;
+  color: #f87171;
+  transform: scale(1.1);
+}
+
+/* ── Timeline Add Form ── */
+.timeline-add-form {
+  background: rgba(124, 58, 237, 0.04);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 18px;
+  animation: fadeInUp 0.3s var(--ease-spring);
+}
+
+/* ── Notes & Requests Card ── */
+.client-notes-card {}
+
+.notes-add-form {
+  background: rgba(124, 58, 237, 0.04);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 18px;
+  animation: fadeInUp 0.3s var(--ease-spring);
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.note-item-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(168, 85, 247, 0.12);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  transition: var(--transition);
+}
+
+.note-item-card:hover {
+  background: rgba(124, 58, 237, 0.06);
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+.note-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.note-type-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.note-priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.note-type-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.note-priority-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.note-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.note-text {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.note-actions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.note-action-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+}
+
+.note-action-btn.edit-btn {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.note-action-btn.edit-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  transform: translateY(-1px);
+}
+
+.note-action-btn.delete-btn {
+  background: rgba(244, 63, 94, 0.1);
+  color: #f87171;
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+.note-action-btn.delete-btn:hover {
+  background: rgba(244, 63, 94, 0.2);
+  transform: translateY(-1px);
+}
+
+.note-action-btn.save-btn {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.note-action-btn.save-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.note-action-btn.cancel-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.note-action-btn.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.note-edit-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  outline: none;
+  resize: vertical;
+  transition: var(--transition);
+  margin-bottom: 8px;
+}
+
+.note-edit-textarea:focus {
+  border-color: var(--violet-neon);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .client-add-photo-form,
+[data-theme="light"] .notes-add-form,
+[data-theme="light"] .timeline-add-form {
+  background: rgba(124, 58, 237, 0.03);
+  border-color: rgba(124, 58, 237, 0.15);
+}
+
+[data-theme="light"] .note-item-card {
+  background: rgba(0, 0, 0, 0.015);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .note-edit-textarea {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .costs-edit-preview {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLIENT → CONTRACTOR NOTIFICATION SYSTEM STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Red badge pill on the "Site Info & Logs" tab */
+.notif-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0 6px;
+  margin-left: 8px;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.55);
+  animation: notif-pulse 2s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+/* Inline badge used inside the card heading */
+.notif-badge-inline {
+  font-size: 0.7rem;
+  height: 22px;
+  margin-left: 10px;
+  padding: 0 8px;
+}
+
+@keyframes notif-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(244,63,94,0.5); }
+  50%       { box-shadow: 0 0 18px rgba(244,63,94,0.85); }
+}
+
+/* Contractor notification card */
+.contractor-notif-card {
+  border-color: rgba(244, 63, 94, 0.15);
+}
+
+/* Notification list container */
+.contractor-notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Each notification row */
+.contractor-notif-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.contractor-notif-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateX(3px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Unread glow border */
+.contractor-notif-item.unread {
+  border-left: 3px solid #f43f5e;
+  background: rgba(244, 63, 94, 0.04);
+}
+
+.contractor-notif-item.unread:hover {
+  background: rgba(244, 63, 94, 0.08);
+}
+
+/* Header row inside each notification */
+.notif-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* Pulsing red dot for unread */
+.notif-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f43f5e;
+  flex-shrink: 0;
+  animation: dot-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* Notification body text */
+.notif-item-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+/* Small "click to mark as read" hint */
+.notif-click-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.65;
+  margin-top: 4px;
+}
+
+/* ── "Notification sent" flash banner (client side) ─────────── */
+.note-sent-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.08));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #34d399;
+  margin-bottom: 14px;
+  animation: slide-down 0.35s ease, fade-out-banner 0.5s ease 2s forwards;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-out-banner {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+/* ── Light theme overrides for notifications ─────────────────── */
+[data-theme="light"] .contractor-notif-item {
+  background: rgba(0, 0, 0, 0.015);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .contractor-notif-item.unread {
+  background: rgba(244, 63, 94, 0.04);
+  border-left-color: #e11d48;
+}
+
+[data-theme="light"] .contractor-notif-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .note-sent-banner {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.08), rgba(8, 145, 178, 0.06));
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #059669;
+}
+
+[data-theme="light"] .contractor-notif-card {
+  border-color: rgba(244, 63, 94, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEEN / PENDING RECEIPT CHIPS  (shown on client note cards)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ✅ Seen receipt — appears once contractor clicks the note */
+.note-seen-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.07));
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #34d399;
+  margin-bottom: 6px;
+  animation: receipt-pop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.seen-tick {
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+@keyframes receipt-pop {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ⏳ Pending receipt — shown until contractor reads */
+.note-pending-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* Pulsing grey dot inside pending chip */
+.pending-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: pending-throb 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pending-throb {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50%       { opacity: 1;    transform: scale(1.1); }
+}
+
+/* Light theme overrides */
+[data-theme="light"] .note-seen-receipt {
+  background: linear-gradient(135deg, rgba(5,150,105,0.08), rgba(8,145,178,0.06));
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #059669;
+}
+
+[data-theme="light"] .note-pending-receipt {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #94a3b8;
+}
+
+/* Custom Items Editor in Budget Card */
+.custom-items-edit-section {
+  margin-top: 18px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.custom-items-edit-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.no-custom-items-notice {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.custom-items-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.custom-item-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  animation: fadeInUp 0.2s var(--ease-spring);
+}
+
+.custom-item-name-input {
+  flex: 3;
+}
+
+.custom-item-cost-input {
+  flex: 2;
+}
+
+.custom-item-edit-row input {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.custom-item-edit-row input:focus {
+  border-color: var(--cyan-bright) !important;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.15);
+}
+
+.delete-custom-item-btn {
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  color: var(--red-neon);
+  border-radius: var(--radius-sm);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.delete-custom-item-btn:hover {
+  background: var(--red-neon);
+  color: #fff;
+  border-color: var(--red-neon);
+  transform: scale(1.05);
+}
+
+.add-custom-item-btn {
+  background: rgba(34, 211, 238, 0.05);
+  border: 1px dashed rgba(34, 211, 238, 0.3);
+  color: var(--cyan-bright);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.add-custom-item-btn:hover {
+  background: rgba(34, 211, 238, 0.12);
+  border-color: var(--cyan-bright);
+  transform: translateY(-1px);
+}

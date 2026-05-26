@@ -402,7 +402,7 @@ function RegisterPage({ onRegister, onGoLogin, theme, setTheme }) {
           onChange={e => { setFullName(e.target.value); setErrors(prev => ({ ...prev, fullName: '' })); }}
           icon={UserIcon}
           error={errors.fullName}
-          placeholder="Amir Khan"
+          placeholder="shani dibin"
         />
 
         <InputField
@@ -460,23 +460,47 @@ function RegisterPage({ onRegister, onGoLogin, theme, setTheme }) {
 function App() {
   const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'dashboard'
   const [user, setUser] = useState(null);
+
+  // ── SHARED CLIENT NOTES (visible to contractor as notifications) ────────────
+  const [clientNotes, setClientNotes] = useState(() => {
+    const saved = localStorage.getItem('cf_client_notes');
+    return saved ? JSON.parse(saved) : [
+      { id: 'n-1', type: 'Note', text: 'Please ensure the roof waterproofing is double-checked before closing.', date: '2026-05-24', priority: 'high', readByContractor: false },
+      { id: 'n-2', type: 'Request', text: 'Need updated photos of the electrical conduit work by end of week.', date: '2026-05-25', priority: 'medium', readByContractor: false },
+      { id: 'n-3', type: 'Note', text: 'Paint colors: Living Room — Ivory White, Bedrooms — Sage Green.', date: '2026-05-26', priority: 'low', readByContractor: false },
+    ];
+  });
+
+  const saveClientNotes = (updated) => {
+    setClientNotes(updated);
+    localStorage.setItem('cf_client_notes', JSON.stringify(updated));
+  };
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [animKey, setAnimKey] = useState(0);
 
   // ── SEED/SHARED STATE ──────────────────────────────────────────────────────
   const [siteDetails, setSiteDetails] = useState(() => {
     const saved = localStorage.getItem('cf_site_details');
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
       siteName: "Sunrise Villa Restoration",
       projectAddress: "Plot 42, Green Meadows, Mumbai, MH 400001",
-      clientName: "Amir Khan",
-      contractorName: "BuildPro Ltd. (Rahul Patel)",
+      clientName: "shani dibin",
+      contractorName: "Albin Mathew",
       projectType: "Residential Luxury Villa",
       startDate: "2026-01-15",
       expectedCompletionDate: "2026-10-30",
       siteDescription: "Ultra-modern 3-story residential luxury villa with glass facade, rooftop terrace, solar integrations, automated smart systems, and custom interior design.",
       currentStage: "Roof Work"
     };
+    if (!saved) return defaults;
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.clientName === "Amir Khan") parsed.clientName = "shani dibin";
+      if (parsed.contractorName === "BuildPro Ltd. (Rahul Patel)") parsed.contractorName = "Albin Mathew";
+      return parsed;
+    } catch (e) {
+      return defaults;
+    }
   });
 
   const [photos, setPhotos] = useState(() => {
@@ -552,7 +576,8 @@ function App() {
       steel: 45000,
       bricks: 15000,
       paint: 10000,
-      labourCost: 30000
+      labourCost: 30000,
+      extras: {}       // ← dynamic items added by contractor
     };
   });
 
@@ -619,6 +644,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('cf_workers_data', JSON.stringify(workers));
   }, [workers]);
+
+  useEffect(() => {
+    localStorage.setItem('cf_client_notes', JSON.stringify(clientNotes));
+  }, [clientNotes]);
 
   // Sync theme
   useEffect(() => {
@@ -692,6 +721,10 @@ function App() {
     setTimeline(prev => [newEvent, ...prev]);
   };
 
+  const deleteTimelineEvent = (eventId) => {
+    setTimeline(prev => prev.filter(e => e.id !== eventId));
+  };
+
   const addPhotoFromSite = (photoObj) => {
     const newPhoto = {
       id: 'p-' + Date.now(),
@@ -751,12 +784,15 @@ function App() {
                 addPhotoFromSite={addPhotoFromSite}
                 timeline={timeline}
                 addTimelineEvent={addTimelineEvent}
+                deleteTimelineEvent={deleteTimelineEvent}
                 costs={costs}
                 setCosts={setCosts}
                 materials={materials}
                 setMaterials={setMaterials}
                 workers={workers}
                 setWorkers={setWorkers}
+                clientNotes={clientNotes}
+                saveClientNotes={saveClientNotes}
               />
             )}
           </div>
@@ -781,12 +817,15 @@ function DashboardScreen({
   addPhotoFromSite,
   timeline,
   addTimelineEvent,
+  deleteTimelineEvent,
   costs,
   setCosts,
   materials,
   setMaterials,
   workers,
-  setWorkers
+  setWorkers,
+  clientNotes,
+  saveClientNotes
 }) {
   const isClient = user.role !== 'contractor';
 
@@ -826,9 +865,12 @@ function DashboardScreen({
           photos={photos}
           setPhotos={setPhotos}
           timeline={timeline}
+          deleteTimelineEvent={deleteTimelineEvent}
           costs={costs}
           setCosts={setCosts}
           addTimelineEvent={addTimelineEvent}
+          clientNotes={clientNotes}
+          saveClientNotes={saveClientNotes}
         />
       ) : (
         <ContractorDashboard
@@ -845,6 +887,8 @@ function DashboardScreen({
           setMaterials={setMaterials}
           workers={workers}
           setWorkers={setWorkers}
+          clientNotes={clientNotes}
+          saveClientNotes={saveClientNotes}
         />
       )}
     </div>
@@ -852,84 +896,10 @@ function DashboardScreen({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 1. CLIENT DASHBOARD COMPONENT (with Edit Process on Client Side)
+// 1. CLIENT DASHBOARD COMPONENT
 // ══════════════════════════════════════════════════════════════════════════════
-function ClientDashboard({ siteDetails, photos, setPhotos, timeline, costs, setCosts, addTimelineEvent }) {
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [photoFilter, setPhotoFilter] = useState('All');
-  
-  // Custom Inline Photo Editing for Client (e.g. adding client notes or changing description)
-  const [editingPhotoId, setEditingPhotoId] = useState(null);
-  const [editPhotoDesc, setEditPhotoDesc] = useState('');
-  const [editPhotoStage, setEditPhotoStage] = useState('');
-  const [editPhotoCat, setEditPhotoCat] = useState('');
-
-  // Inline cost edits (Client can request adjustment or edit budget)
-  const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [editBudgetVal, setEditBudgetVal] = useState(costs.totalBudget);
-
-  const photoStages = ['All', 'Foundation Work', 'Brick Work', 'Roof Work', 'Painting', 'Electrical Work', 'Interior Work'];
-
-  const filteredPhotos = photoFilter === 'All'
-    ? photos
-    : photos.filter(p => p.stage === photoFilter);
-
-  const spentAmount = costs.cement + costs.steel + costs.bricks + costs.paint + costs.labourCost;
-  const remainingAmount = costs.totalBudget - spentAmount;
-  const spendPercentage = Math.min((spentAmount / costs.totalBudget) * 100, 100);
-
+function ClientDashboard({ siteDetails, photos, setPhotos, timeline, deleteTimelineEvent, costs, setCosts, addTimelineEvent, clientNotes, saveClientNotes }) {
   const formatINR = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
-
-  const downloadImage = (url, name) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name || 'construction-photo.jpg';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const startEditPhoto = (photo) => {
-    setEditingPhotoId(photo.id);
-    setEditPhotoDesc(photo.description);
-    setEditPhotoStage(photo.stage);
-    setEditPhotoCat(photo.category);
-  };
-
-  const savePhotoEdit = (photoId) => {
-    setPhotos(prev => prev.map(p => {
-      if (p.id === photoId) {
-        return { ...p, description: editPhotoDesc, stage: editPhotoStage, category: editPhotoCat };
-      }
-      return p;
-    }));
-    setEditingPhotoId(null);
-    addTimelineEvent({
-      status: 'Photo Edited',
-      description: `Client adjusted details for a photo in "${editPhotoStage}"`
-    });
-  };
-
-  const deletePhoto = (photoId) => {
-    if (window.confirm('Are you sure you want to delete this photo?')) {
-      setPhotos(prev => prev.filter(p => p.id !== photoId));
-      addTimelineEvent({
-        status: 'Photo Removed',
-        description: 'A site progress photo was deleted by Client.'
-      });
-    }
-  };
-
-  const handleBudgetChangeSubmit = (e) => {
-    e.preventDefault();
-    setCosts(prev => ({ ...prev, totalBudget: parseFloat(editBudgetVal) || 0 }));
-    setIsEditingBudget(false);
-    addTimelineEvent({
-      status: 'Budget Adjusted',
-      description: `Client updated Total Budget allocation to ${formatINR(editBudgetVal)}.`
-    });
-  };
 
   return (
     <div className="dashboard-content-grid">
@@ -955,235 +925,624 @@ function ClientDashboard({ siteDetails, photos, setPhotos, timeline, costs, setC
       </div>
 
       <div className="dash-two-columns">
-        
         {/* Column Left: Visual Gallery */}
         <div className="dash-column flex-grow-3">
-          <div className="glass-card">
-            <div className="card-header-row">
-              <div>
-                <h2 className="card-heading-title">🛠️ Working Site Gallery</h2>
-                <span className="card-heading-subtitle">Click details to edit captions or delete photos on-the-fly</span>
-              </div>
-            </div>
-
-            {/* Filter buttons */}
-            <div className="filter-scroll-container">
-              {photoStages.map(stage => (
-                <button
-                  key={stage}
-                  type="button"
-                  className={`filter-badge-btn ${photoFilter === stage ? 'active' : ''}`}
-                  onClick={() => setPhotoFilter(stage)}
-                >
-                  {stage}
-                </button>
-              ))}
-            </div>
-
-            {/* Gallery Grid */}
-            <div className="photo-gallery-grid">
-              {filteredPhotos.map(photo => (
-                <div key={photo.id} className="gallery-photo-card">
-                  <div className="photo-image-wrap" onClick={() => setSelectedPhoto(photo)}>
-                    <img src={photo.url} alt={photo.description} />
-                    <span className={`photo-category-badge ${photo.category.toLowerCase()}`}>
-                      {photo.category}
-                    </span>
-                  </div>
-                  
-                  {editingPhotoId === photo.id ? (
-                    <div className="photo-details-wrap editing-block">
-                      <div className="form-group-item" style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.7rem' }}>Stage</label>
-                        <select value={editPhotoStage} onChange={e => setEditPhotoStage(e.target.value)} style={{ padding: '4px', fontSize: '0.8rem' }}>
-                          <option value="Foundation Work">Foundation Work</option>
-                          <option value="Brick Work">Brick Work</option>
-                          <option value="Roof Work">Roof Work</option>
-                          <option value="Electrical Work">Electrical Work</option>
-                          <option value="Painting">Painting</option>
-                          <option value="Interior Work">Interior Work</option>
-                        </select>
-                      </div>
-                      <div className="form-group-item" style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.7rem' }}>Timing</label>
-                        <select value={editPhotoCat} onChange={e => setEditPhotoCat(e.target.value)} style={{ padding: '4px', fontSize: '0.8rem' }}>
-                          <option value="Before">Before</option>
-                          <option value="During">During</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </div>
-                      <div className="form-group-item" style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.7rem' }}>Description</label>
-                        <textarea value={editPhotoDesc} onChange={e => setEditPhotoDesc(e.target.value)} rows="2" style={{ padding: '4px', fontSize: '0.8rem' }} />
-                      </div>
-                      <div className="photo-actions-row">
-                        <button type="button" className="photo-action-btn download" onClick={() => savePhotoEdit(photo.id)}>Save</button>
-                        <button type="button" className="photo-action-btn zoom" onClick={() => setEditingPhotoId(null)}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="photo-details-wrap">
-                      <div className="photo-header-line">
-                        <span className="photo-stage-tag">{photo.stage}</span>
-                        <span className="photo-date-tag">{photo.uploadDate}</span>
-                      </div>
-                      <p className="photo-desc-text">{photo.description}</p>
-                      
-                      {/* Edit/Delete + Zoom/Download options */}
-                      <div className="photo-actions-row" style={{ flexWrap: 'wrap', gap: '6px' }}>
-                        <button type="button" className="photo-action-btn zoom" onClick={() => setSelectedPhoto(photo)}>🔍 Zoom</button>
-                        <button type="button" className="photo-action-btn download" onClick={() => downloadImage(photo.url, `${photo.stage}.jpg`)}>⬇️ Download</button>
-                        <button type="button" className="photo-action-btn edit-meta-btn" onClick={() => startEditPhoto(photo)} style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.25)' }}>✏️ Edit</button>
-                        <button type="button" className="photo-action-btn delete-meta-btn" onClick={() => deletePhoto(photo.id)} style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f87171', border: '1px solid rgba(244, 63, 94, 0.25)' }}>🗑️ Del</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {filteredPhotos.length === 0 && (
-                <div className="empty-state-notice">No progress photos found.</div>
-              )}
-            </div>
-          </div>
+          <ClientGalleryPanel photos={photos} setPhotos={setPhotos} addTimelineEvent={addTimelineEvent} />
         </div>
 
-        {/* Column Right: Costs & Timelines */}
+        {/* Column Right: Costs, Timeline, Notes */}
         <div className="dash-column flex-grow-2">
-          
-          {/* Cost and Budget Card */}
-          <div className="glass-card cost-glass-card">
-            <div className="card-header-row">
-              <h2 className="card-heading-title">💰 Budget & Costs</h2>
-              <button type="button" className="add-content-btn" style={{ fontSize: '0.75rem', padding: '4px 10px' }} onClick={() => setIsEditingBudget(!isEditingBudget)}>
-                {isEditingBudget ? 'Cancel' : '✍️ Edit Budget'}
-              </button>
-            </div>
-
-            {isEditingBudget ? (
-              <form onSubmit={handleBudgetChangeSubmit} className="simple-add-form" style={{ marginBottom: '16px' }}>
-                <div className="form-group-item">
-                  <label>Total Project Budget (₹)</label>
-                  <input
-                    type="number"
-                    value={editBudgetVal}
-                    onChange={e => setEditBudgetVal(e.target.value)}
-                    required
-                  />
-                </div>
-                <button type="submit" className="add-content-btn" style={{ width: '100%' }}>Update Budget</button>
-              </form>
-            ) : null}
-
-            {/* KPI Stat Cards */}
-            <div className="cost-kpi-grid">
-              <div className="kpi-box budget">
-                <span className="kpi-label">Total Budget</span>
-                <span className="kpi-val">{formatINR(costs.totalBudget)}</span>
-              </div>
-              <div className="kpi-box spent">
-                <span className="kpi-label">Spent Amount</span>
-                <span className="kpi-val">{formatINR(spentAmount)}</span>
-              </div>
-              <div className="kpi-box remaining">
-                <span className="kpi-label">Remaining</span>
-                <span className="kpi-val" style={{ color: remainingAmount < 0 ? '#f43f5e' : '#10b981' }}>
-                  {formatINR(remainingAmount)}
-                </span>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="progress-bar-block">
-              <div className="progress-label-flex">
-                <span>Budget Spent Efficiency</span>
-                <span>{spendPercentage.toFixed(1)}%</span>
-              </div>
-              <div className="progress-bar-bg-custom">
-                <div
-                  className="progress-bar-fill-custom"
-                  style={{
-                    width: `${spendPercentage}%`,
-                    background: spendPercentage > 90 ? 'var(--red-neon)' : 'linear-gradient(90deg, var(--cyan-bright), var(--violet-neon))'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="cost-breakdown-list">
-              <h3 className="breakdown-subtitle">Itemized Expenditure</h3>
-              <ul className="itemized-ul">
-                <li className="itemized-li">
-                  <span className="item-name">Cement</span>
-                  <span className="item-cost">{formatINR(costs.cement)}</span>
-                </li>
-                <li className="itemized-li">
-                  <span className="item-name">Steel</span>
-                  <span className="item-cost">{formatINR(costs.steel)}</span>
-                </li>
-                <li className="itemized-li">
-                  <span className="item-name">Bricks</span>
-                  <span className="item-cost">{formatINR(costs.bricks)}</span>
-                </li>
-                <li className="itemized-li">
-                  <span className="item-name">Paint</span>
-                  <span className="item-cost">{formatINR(costs.paint)}</span>
-                </li>
-                <li className="itemized-li">
-                  <span className="item-name">Labour Cost</span>
-                  <span className="item-cost">{formatINR(costs.labourCost)}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Timeline Card */}
-          <div className="glass-card">
-            <h2 className="card-heading-title">⏱️ Live Timeline Logs</h2>
-            <div className="timeline-v-list">
-              {timeline.map(event => (
-                <div key={event.id} className="timeline-v-item">
-                  <div className="timeline-node-dot"></div>
-                  <div className="timeline-v-card">
-                    <div className="timeline-v-header">
-                      <span className="timeline-v-time">{event.time}</span>
-                      <span className="timeline-v-status">{event.status}</span>
-                    </div>
-                    <p className="timeline-v-desc">{event.description}</p>
-                    <span className="timeline-v-date">{event.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          <ClientBudgetPanel costs={costs} setCosts={setCosts} addTimelineEvent={addTimelineEvent} formatINR={formatINR} />
+          <ClientTimelinePanel timeline={timeline} addTimelineEvent={addTimelineEvent} deleteTimelineEvent={deleteTimelineEvent} />
+          <ClientNotesPanel clientNotes={clientNotes} saveClientNotes={saveClientNotes} addTimelineEvent={addTimelineEvent} />
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Lightbox Overlay */}
+// ══════════════════════════════════════════════════════════════════════════════
+// CLIENT GALLERY PANEL — Add (URL or file), Edit, Delete
+// ══════════════════════════════════════════════════════════════════════════════
+function ClientGalleryPanel({ photos, setPhotos, addTimelineEvent }) {
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [photoFilter, setPhotoFilter] = useState('All');
+  const [editingPhotoId, setEditingPhotoId] = useState(null);
+  const [editPhotoDesc, setEditPhotoDesc] = useState('');
+  const [editPhotoStage, setEditPhotoStage] = useState('');
+  const [editPhotoCat, setEditPhotoCat] = useState('');
+  const [showAddPhotoForm, setShowAddPhotoForm] = useState(false);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [newPhotoStage, setNewPhotoStage] = useState('Roof Work');
+  const [newPhotoCat, setNewPhotoCat] = useState('During');
+  const [newPhotoDesc, setNewPhotoDesc] = useState('');
+  const [newPhotoFile, setNewPhotoFile] = useState('');
+  const [newPhotoFileName, setNewPhotoFileName] = useState('No file chosen');
+  const [addPhotoMode, setAddPhotoMode] = useState('url');
+
+  const photoStages = ['All', 'Foundation Work', 'Brick Work', 'Roof Work', 'Painting', 'Electrical Work', 'Interior Work'];
+  const photoStageOptions = ['Foundation Work', 'Brick Work', 'Roof Work', 'Painting', 'Electrical Work', 'Interior Work'];
+  const filteredPhotos = photoFilter === 'All' ? photos : photos.filter(p => p.stage === photoFilter);
+
+  const downloadImage = (url, name) => {
+    const link = document.createElement('a');
+    link.href = url; link.download = name || 'photo.jpg'; link.target = '_blank';
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
+
+  const startEditPhoto = (photo) => {
+    setEditingPhotoId(photo.id); setEditPhotoDesc(photo.description);
+    setEditPhotoStage(photo.stage); setEditPhotoCat(photo.category);
+  };
+
+  const savePhotoEdit = (photoId) => {
+    setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, description: editPhotoDesc, stage: editPhotoStage, category: editPhotoCat } : p));
+    setEditingPhotoId(null);
+    addTimelineEvent({ status: 'Photo Edited', description: `Client updated photo details for "${editPhotoStage}"` });
+  };
+
+  const deletePhoto = (photoId) => {
+    if (window.confirm('Delete this photo from the gallery?')) {
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
+      addTimelineEvent({ status: 'Photo Removed', description: 'A site progress photo was deleted by Client.' });
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    setNewPhotoFileName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => setNewPhotoFile(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddPhotoSubmit = (e) => {
+    e.preventDefault();
+    const finalUrl = addPhotoMode === 'file' ? newPhotoFile : newPhotoUrl;
+    if (!finalUrl) { alert('Please provide a photo URL or select a file.'); return; }
+    const newPhoto = { id: 'p-' + Date.now(), stage: newPhotoStage, category: newPhotoCat, url: finalUrl, uploadDate: new Date().toISOString().split('T')[0], description: newPhotoDesc || 'Client uploaded photo' };
+    setPhotos(prev => [newPhoto, ...prev]);
+    addTimelineEvent({ status: 'New Images Added', description: `Client added photo: "${newPhoto.description}" (${newPhotoStage})` });
+    setNewPhotoUrl(''); setNewPhotoDesc(''); setNewPhotoFile(''); setNewPhotoFileName('No file chosen');
+    setShowAddPhotoForm(false);
+  };
+
+  return (
+    <div className="glass-card">
+      <div className="card-header-row">
+        <div>
+          <h2 className="card-heading-title">🛠️ Working Site Gallery</h2>
+          <span className="card-heading-subtitle">Add, edit & delete site progress photos</span>
+        </div>
+        <button type="button" className={`add-content-btn ${showAddPhotoForm ? 'cancel-mode' : ''}`}
+          onClick={() => setShowAddPhotoForm(v => !v)}>
+          {showAddPhotoForm ? '✕ Cancel' : '➕ Add Photo'}
+        </button>
+      </div>
+
+      {showAddPhotoForm && (
+        <div className="client-add-photo-form">
+          <div className="add-photo-mode-toggle">
+            <button type="button" className={`mode-toggle-btn ${addPhotoMode === 'url' ? 'active' : ''}`} onClick={() => setAddPhotoMode('url')}>🔗 From URL</button>
+            <button type="button" className={`mode-toggle-btn ${addPhotoMode === 'file' ? 'active' : ''}`} onClick={() => setAddPhotoMode('file')}>📂 Upload File</button>
+          </div>
+          <form onSubmit={handleAddPhotoSubmit} className="simple-add-form" style={{ marginTop: '14px' }}>
+            <div className="form-flex-row">
+              <div className="form-group-item">
+                <label>Stage</label>
+                <select value={newPhotoStage} onChange={e => setNewPhotoStage(e.target.value)}>
+                  {photoStageOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="form-group-item">
+                <label>Timing</label>
+                <select value={newPhotoCat} onChange={e => setNewPhotoCat(e.target.value)}>
+                  {['Before', 'During', 'Completed'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            {addPhotoMode === 'url' ? (
+              <div className="form-group-item">
+                <label>Image URL</label>
+                <input type="url" placeholder="https://example.com/photo.jpg" value={newPhotoUrl} onChange={e => setNewPhotoUrl(e.target.value)} />
+              </div>
+            ) : (
+              <div className="form-group-item">
+                <label>Upload Image File</label>
+                <div className="custom-file-upload-block">
+                  <input type="file" id="client-photo-file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
+                  <button type="button" className="add-content-btn" style={{ width: '100%' }} onClick={() => document.getElementById('client-photo-file').click()}>📂 Choose File</button>
+                  <div style={{ marginTop: '6px', fontSize: '0.78rem', textAlign: 'center', opacity: 0.75 }}><strong>{newPhotoFileName}</strong></div>
+                  {newPhotoFile && <img src={newPhotoFile} alt="preview" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '8px', marginTop: '8px' }} />}
+                </div>
+              </div>
+            )}
+            <div className="form-group-item">
+              <label>Description</label>
+              <input type="text" placeholder="Describe this photo..." value={newPhotoDesc} onChange={e => setNewPhotoDesc(e.target.value)} />
+            </div>
+            <button type="submit" className="add-content-btn" style={{ width: '100%', marginTop: '10px' }}>✅ Add to Gallery</button>
+          </form>
+        </div>
+      )}
+
+      <div className="filter-scroll-container">
+        {photoStages.map(stage => (
+          <button key={stage} type="button" className={`filter-badge-btn ${photoFilter === stage ? 'active' : ''}`} onClick={() => setPhotoFilter(stage)}>{stage}</button>
+        ))}
+      </div>
+
+      <div className="photo-gallery-grid">
+        {filteredPhotos.map(photo => (
+          <div key={photo.id} className="gallery-photo-card">
+            <div className="photo-image-wrap" onClick={() => setSelectedPhoto(photo)}>
+              <img src={photo.url} alt={photo.description} />
+              <span className={`photo-category-badge ${photo.category.toLowerCase()}`}>{photo.category}</span>
+            </div>
+            {editingPhotoId === photo.id ? (
+              <div className="photo-details-wrap editing-block">
+                <div className="form-group-item" style={{ marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.7rem' }}>Stage</label>
+                  <select value={editPhotoStage} onChange={e => setEditPhotoStage(e.target.value)} style={{ padding: '4px', fontSize: '0.8rem' }}>
+                    {photoStageOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="form-group-item" style={{ marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.7rem' }}>Timing</label>
+                  <select value={editPhotoCat} onChange={e => setEditPhotoCat(e.target.value)} style={{ padding: '4px', fontSize: '0.8rem' }}>
+                    {['Before', 'During', 'Completed'].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-group-item" style={{ marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.7rem' }}>Description</label>
+                  <textarea value={editPhotoDesc} onChange={e => setEditPhotoDesc(e.target.value)} rows="2" style={{ padding: '4px', fontSize: '0.8rem' }} />
+                </div>
+                <div className="photo-actions-row">
+                  <button type="button" className="photo-action-btn download" onClick={() => savePhotoEdit(photo.id)}>Save</button>
+                  <button type="button" className="photo-action-btn zoom" onClick={() => setEditingPhotoId(null)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="photo-details-wrap">
+                <div className="photo-header-line">
+                  <span className="photo-stage-tag">{photo.stage}</span>
+                  <span className="photo-date-tag">{photo.uploadDate}</span>
+                </div>
+                <p className="photo-desc-text">{photo.description}</p>
+                <div className="photo-actions-row" style={{ flexWrap: 'wrap', gap: '6px' }}>
+                  <button type="button" className="photo-action-btn zoom" onClick={() => setSelectedPhoto(photo)}>🔍 Zoom</button>
+                  <button type="button" className="photo-action-btn download" onClick={() => downloadImage(photo.url, `${photo.stage}.jpg`)}>⬇️ Download</button>
+                  <button type="button" className="photo-action-btn edit-meta-btn" onClick={() => startEditPhoto(photo)} style={{ background: 'rgba(245,158,11,0.1)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}>✏️ Edit</button>
+                  <button type="button" className="photo-action-btn delete-meta-btn" onClick={() => deletePhoto(photo.id)} style={{ background: 'rgba(244,63,94,0.1)', color: '#f87171', border: '1px solid rgba(244,63,94,0.25)' }}>🗑️ Del</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {filteredPhotos.length === 0 && <div className="empty-state-notice">No progress photos found.</div>}
+      </div>
+
       {selectedPhoto && (
         <div className="lightbox-overlay" onClick={() => setSelectedPhoto(null)}>
-          <div className="lightbox-img-container" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="close-lightbox-btn" onClick={() => setSelectedPhoto(null)}>
-              &times;
-            </button>
+          <div className="lightbox-img-container" onClick={e => e.stopPropagation()}>
+            <button type="button" className="close-lightbox-btn" onClick={() => setSelectedPhoto(null)}>&times;</button>
             <img src={selectedPhoto.url} alt={selectedPhoto.description} className="zoomed-image-item" />
             <div className="lightbox-caption-block">
               <h3 className="lightbox-stage-title">{selectedPhoto.stage} ({selectedPhoto.category})</h3>
               <p className="lightbox-desc">{selectedPhoto.description}</p>
               <div className="lightbox-meta">Uploaded on {selectedPhoto.uploadDate}</div>
               <div style={{ marginTop: '12px' }}>
-                <button
-                  type="button"
-                  className="add-content-btn"
-                  onClick={() => downloadImage(selectedPhoto.url, `${selectedPhoto.stage}.jpg`)}
-                >
-                  Download File
-                </button>
+                <button type="button" className="add-content-btn" onClick={() => downloadImage(selectedPhoto.url, `${selectedPhoto.stage}.jpg`)}>Download File</button>
               </div>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CLIENT BUDGET PANEL — Full edit of ALL cost line items
+// ══════════════════════════════════════════════════════════════════════════════
+function ClientBudgetPanel({ costs, setCosts, addTimelineEvent, formatINR }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBudget, setEditBudget] = useState(costs.totalBudget);
+  const [editCement, setEditCement] = useState(costs.cement);
+  const [editSteel, setEditSteel] = useState(costs.steel);
+  const [editBricks, setEditBricks] = useState(costs.bricks);
+  const [editPaint, setEditPaint] = useState(costs.paint);
+  const [editLabour, setEditLabour] = useState(costs.labourCost);
+  const [editExtras, setEditExtras] = useState([]);
+
+  const extras = costs.extras || {};
+  const extrasTotal = Object.values(extras).reduce((s, v) => s + v, 0);
+  const spentAmount = costs.cement + costs.steel + costs.bricks + costs.paint + costs.labourCost + extrasTotal;
+  const remainingAmount = costs.totalBudget - spentAmount;
+  const spendPercentage = Math.min((spentAmount / costs.totalBudget) * 100, 100);
+
+  const handleOpenEdit = () => {
+    setEditBudget(costs.totalBudget); setEditCement(costs.cement); setEditSteel(costs.steel);
+    setEditBricks(costs.bricks); setEditPaint(costs.paint); setEditLabour(costs.labourCost);
+    const initialExtras = Object.entries(costs.extras || {}).map(([name, cost], idx) => ({
+      id: `ext-client-${idx}-${Date.now()}`,
+      name,
+      cost
+    }));
+    setEditExtras(initialExtras);
+    setIsEditing(true);
+  };
+
+  const handleAddEditExtra = () => {
+    setEditExtras(prev => [
+      ...prev,
+      { id: `ext-new-${Date.now()}-${Math.random()}`, name: '', cost: '' }
+    ]);
+  };
+
+  const handleUpdateExtraName = (id, name) => {
+    setEditExtras(prev => prev.map(item => item.id === id ? { ...item, name } : item));
+  };
+
+  const handleUpdateExtraCost = (id, cost) => {
+    setEditExtras(prev => prev.map(item => item.id === id ? { ...item, cost: cost === '' ? '' : parseFloat(cost) || 0 } : item));
+  };
+
+  const handleDeleteEditExtra = (id) => {
+    setEditExtras(prev => prev.filter(item => item.id !== id));
+  };
+
+  const extrasTotalLive = editExtras.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+  const liveTotalSpent = (parseFloat(editCement)||0)+(parseFloat(editSteel)||0)+(parseFloat(editBricks)||0)+(parseFloat(editPaint)||0)+(parseFloat(editLabour)||0)+extrasTotalLive;
+
+  const handleSaveCosts = (e) => {
+    e.preventDefault();
+    const newExtras = {};
+    editExtras.forEach(item => {
+      if (item.name.trim()) {
+        newExtras[item.name.trim()] = parseFloat(item.cost) || 0;
+      }
+    });
+
+    const updated = {
+      totalBudget: parseFloat(editBudget)||0,
+      cement:      parseFloat(editCement)||0,
+      steel:       parseFloat(editSteel)||0,
+      bricks:      parseFloat(editBricks)||0,
+      paint:       parseFloat(editPaint)||0,
+      labourCost:  parseFloat(editLabour)||0,
+      extras:      newExtras
+    };
+    setCosts(updated);
+    setIsEditing(false);
+    addTimelineEvent({ status: 'Budget Adjusted', description: `Client updated all cost allocations & custom items. Total Budget: ${formatINR(updated.totalBudget)}.` });
+  };
+
+  return (
+    <div className="glass-card cost-glass-card">
+      <div className="card-header-row">
+        <h2 className="card-heading-title">💰 Budget & Costs</h2>
+        <button type="button" className={`add-content-btn ${isEditing ? 'cancel-mode' : ''}`}
+          style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+          onClick={() => isEditing ? setIsEditing(false) : handleOpenEdit()}>
+          {isEditing ? '✕ Cancel' : '✍️ Edit All Costs'}
+        </button>
+      </div>
+
+      {isEditing ? (
+        <form onSubmit={handleSaveCosts} className="client-costs-edit-form">
+          <div className="costs-edit-grid">
+            <div className="costs-edit-field budget-field">
+              <label>💼 Total Budget (₹)</label>
+              <input type="number" value={editBudget} onChange={e => setEditBudget(e.target.value)} required />
+            </div>
+            <div className="costs-edit-field"><label>🏗️ Cement (₹)</label><input type="number" value={editCement} onChange={e => setEditCement(e.target.value)} required /></div>
+            <div className="costs-edit-field"><label>⚙️ Steel (₹)</label><input type="number" value={editSteel} onChange={e => setEditSteel(e.target.value)} required /></div>
+            <div className="costs-edit-field"><label>🧱 Bricks (₹)</label><input type="number" value={editBricks} onChange={e => setEditBricks(e.target.value)} required /></div>
+            <div className="costs-edit-field"><label>🎨 Paint (₹)</label><input type="number" value={editPaint} onChange={e => setEditPaint(e.target.value)} required /></div>
+            <div className="costs-edit-field"><label>👷 Labour (₹)</label><input type="number" value={editLabour} onChange={e => setEditLabour(e.target.value)} required /></div>
+          </div>
+
+          <div className="custom-items-edit-section">
+            <h4 className="custom-items-edit-title">📦 Custom Extras Ledger</h4>
+            {editExtras.length === 0 ? (
+              <p className="no-custom-items-notice">No custom items added yet.</p>
+            ) : (
+              <div className="custom-items-edit-list">
+                {editExtras.map((item) => (
+                  <div key={item.id} className="custom-item-edit-row">
+                    <input
+                      type="text"
+                      placeholder="Item Name (e.g. Sand)"
+                      value={item.name}
+                      onChange={(e) => handleUpdateExtraName(item.id, e.target.value)}
+                      className="custom-item-name-input"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="Cost (₹)"
+                      value={item.cost}
+                      onChange={(e) => handleUpdateExtraCost(item.id, e.target.value)}
+                      className="custom-item-cost-input"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="delete-custom-item-btn"
+                      onClick={() => handleDeleteEditExtra(item.id)}
+                      title="Remove Item"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              className="add-custom-item-btn"
+              onClick={handleAddEditExtra}
+            >
+              ➕ Add Custom Item
+            </button>
+          </div>
+
+          <div className="costs-edit-preview">
+            <span>Live Total Spent:</span>
+            <strong style={{ color: liveTotalSpent > (parseFloat(editBudget)||0) ? '#f43f5e' : '#10b981' }}>{formatINR(liveTotalSpent)}</strong>
+          </div>
+          <button type="submit" className="add-content-btn" style={{ width: '100%', marginTop: '12px' }}>💾 Save All Budget Changes</button>
+        </form>
+      ) : (
+        <>
+          <div className="cost-kpi-grid">
+            <div className="kpi-box budget"><span className="kpi-label">Total Budget</span><span className="kpi-val">{formatINR(costs.totalBudget)}</span></div>
+            <div className="kpi-box spent"><span className="kpi-label">Spent Amount</span><span className="kpi-val">{formatINR(spentAmount)}</span></div>
+            <div className="kpi-box remaining"><span className="kpi-label">Remaining</span><span className="kpi-val" style={{ color: remainingAmount < 0 ? '#f43f5e' : '#10b981' }}>{formatINR(remainingAmount)}</span></div>
+          </div>
+          <div className="progress-bar-block">
+            <div className="progress-label-flex"><span>Budget Spent Efficiency</span><span>{spendPercentage.toFixed(1)}%</span></div>
+            <div className="progress-bar-bg-custom">
+              <div className="progress-bar-fill-custom" style={{ width: `${spendPercentage}%`, background: spendPercentage > 90 ? 'var(--red-neon)' : 'linear-gradient(90deg, var(--cyan-bright), var(--violet-neon))' }} />
+            </div>
+          </div>
+          <div className="cost-breakdown-list">
+            <h3 className="breakdown-subtitle">Itemized Expenditure</h3>
+            <ul className="itemized-ul">
+              {[['🏗️ Cement', costs.cement], ['⚙️ Steel', costs.steel], ['🧱 Bricks', costs.bricks], ['🎨 Paint', costs.paint], ['👷 Labour Cost', costs.labourCost]].map(([name, val]) => (
+                <li key={name} className="itemized-li"><span className="item-name">{name}</span><span className="item-cost">{formatINR(val)}</span></li>
+              ))}
+              {Object.entries(extras).map(([name, val]) => (
+                <li key={name} className="itemized-li itemized-li-new">
+                  <span className="item-name">📦 {name}</span>
+                  <span className="item-cost">{formatINR(val)}</span>
+                </li>
+              ))}
+              {extrasTotal > 0 && (
+                <li className="itemized-li itemized-total-row">
+                  <span className="item-name" style={{ fontWeight: 700 }}>Total Spent</span>
+                  <span className="item-cost" style={{ color: spentAmount > costs.totalBudget ? '#f43f5e' : '#10b981', fontWeight: 800 }}>{formatINR(spentAmount)}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CLIENT TIMELINE PANEL — Add events + Delete events
+// ══════════════════════════════════════════════════════════════════════════════
+function ClientTimelinePanel({ timeline, addTimelineEvent, deleteTimelineEvent }) {
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [newStatus, setNewStatus] = useState('Progress Update');
+  const [newDesc, setNewDesc] = useState('');
+
+  const handleAddEvent = (e) => {
+    e.preventDefault();
+    if (!newDesc.trim()) return;
+    addTimelineEvent({ status: newStatus, description: newDesc });
+    setNewDesc(''); setShowAddEvent(false);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Delete this timeline event?')) deleteTimelineEvent(id);
+  };
+
+  return (
+    <div className="glass-card" style={{ marginTop: '24px' }}>
+      <div className="card-header-row">
+        <h2 className="card-heading-title">⏱️ Live Timeline Logs</h2>
+        <button type="button" className={`add-content-btn ${showAddEvent ? 'cancel-mode' : ''}`}
+          style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+          onClick={() => setShowAddEvent(v => !v)}>
+          {showAddEvent ? '✕ Cancel' : '➕ Add Event'}
+        </button>
+      </div>
+      {showAddEvent && (
+        <form onSubmit={handleAddEvent} className="simple-add-form timeline-add-form">
+          <div className="form-group-item">
+            <label>Event Type</label>
+            <select value={newStatus} onChange={e => setNewStatus(e.target.value)}>
+              <option value="Progress Update">Progress Update</option>
+              <option value="Client Note">Client Note</option>
+              <option value="Budget Adjusted">Budget Adjusted</option>
+              <option value="Inspection Request">Inspection Request</option>
+              <option value="Work Completed">Work Completed</option>
+              <option value="Milestone Reached">Milestone Reached</option>
+            </select>
+          </div>
+          <div className="form-group-item">
+            <label>Description</label>
+            <textarea rows="3" placeholder="Describe this event..." value={newDesc} onChange={e => setNewDesc(e.target.value)} required />
+          </div>
+          <button type="submit" className="add-content-btn" style={{ width: '100%' }}>📋 Log Event</button>
+        </form>
+      )}
+      <div className="timeline-v-list">
+        {timeline.map(event => (
+          <div key={event.id} className="timeline-v-item client-timeline-item">
+            <div className="timeline-node-dot"></div>
+            <div className="timeline-v-card" style={{ flex: 1 }}>
+              <div className="timeline-v-header">
+                <span className="timeline-v-time">{event.time}</span>
+                <span className="timeline-v-status">{event.status}</span>
+                <button type="button" className="timeline-delete-btn" title="Delete event" onClick={() => handleDelete(event.id)}>✕</button>
+              </div>
+              <p className="timeline-v-desc">{event.description}</p>
+              <span className="timeline-v-date">{event.date}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CLIENT NOTES & REQUESTS PANEL — Fully manageable by client
+// ══════════════════════════════════════════════════════════════════════════════
+function ClientNotesPanel({ clientNotes, saveClientNotes, addTimelineEvent }) {
+  const notes = clientNotes;
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [noteType, setNoteType] = useState('Note');
+  const [noteText, setNoteText] = useState('');
+  const [notePriority, setNotePriority] = useState('medium');
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editNoteText, setEditNoteText] = useState('');
+  const [sentFlash, setSentFlash] = useState(null); // id of note just sent
+
+  const handleAddNote = (e) => {
+    e.preventDefault();
+    if (!noteText.trim()) return;
+    const newNote = {
+      id: 'n-' + Date.now(),
+      type: noteType,
+      text: noteText,
+      date: new Date().toISOString().split('T')[0],
+      priority: notePriority,
+      readByContractor: false   // ← marks as unread for contractor
+    };
+    saveClientNotes([newNote, ...notes]);
+    // Also log it in the shared timeline so contractor sees it immediately
+    addTimelineEvent({
+      status: 'Client Message',
+      description: `[${noteType}] ${noteText}`
+    });
+    setSentFlash(newNote.id);
+    setTimeout(() => setSentFlash(null), 2500);
+    setNoteText('');
+    setShowAddNote(false);
+  };
+
+  const handleDeleteNote = (id) => {
+    if (window.confirm('Delete this note?')) saveClientNotes(notes.filter(n => n.id !== id));
+  };
+  const handleSaveEditNote = (id) => {
+    // Reset seen status so contractor is notified again after edit
+    saveClientNotes(notes.map(n => n.id === id
+      ? { ...n, text: editNoteText, readByContractor: false, seenAt: null }
+      : n
+    ));
+    setEditingNoteId(null);
+  };
+
+  const priorityColors = { high: '#f43f5e', medium: '#f59e0b', low: '#10b981' };
+  const priorityLabels = { high: '🔴 High', medium: '🟡 Medium', low: '🟢 Low' };
+
+  return (
+    <div className="glass-card client-notes-card" style={{ marginTop: '24px' }}>
+      <div className="card-header-row">
+        <div>
+          <h2 className="card-heading-title">📝 My Notes & Requests</h2>
+          <span className="card-heading-subtitle">Notes are sent as live notifications to your contractor 🔔</span>
+        </div>
+        <button type="button" className={`add-content-btn ${showAddNote ? 'cancel-mode' : ''}`}
+          style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+          onClick={() => setShowAddNote(v => !v)}>
+          {showAddNote ? '✕ Cancel' : '➕ New Note'}
+        </button>
+      </div>
+      {sentFlash && (
+        <div className="note-sent-banner">
+          🔔 Notification sent to contractor!
+        </div>
+      )}
+      {showAddNote && (
+        <form onSubmit={handleAddNote} className="simple-add-form notes-add-form">
+          <div className="form-flex-row">
+            <div className="form-group-item">
+              <label>Type</label>
+              <select value={noteType} onChange={e => setNoteType(e.target.value)}>
+                <option value="Note">📌 Note</option>
+                <option value="Request">🔔 Request</option>
+                <option value="Reminder">⏰ Reminder</option>
+                <option value="Approval">✅ Approval</option>
+              </select>
+            </div>
+            <div className="form-group-item">
+              <label>Priority</label>
+              <select value={notePriority} onChange={e => setNotePriority(e.target.value)}>
+                <option value="high">🔴 High</option>
+                <option value="medium">🟡 Medium</option>
+                <option value="low">🟢 Low</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group-item">
+            <label>Note / Request Text</label>
+            <textarea rows="3" placeholder="Write your note or request here..." value={noteText} onChange={e => setNoteText(e.target.value)} required />
+          </div>
+          <button type="submit" className="add-content-btn" style={{ width: '100%' }}>💾 Save Note</button>
+        </form>
+      )}
+      <div className="notes-list">
+        {notes.length === 0 && <div className="empty-state-notice">No notes yet. Add your first note above!</div>}
+        {notes.map(note => (
+          <div key={note.id} className="note-item-card">
+            <div className="note-item-header">
+              <div className="note-type-badge">
+                <span className="note-priority-dot" style={{ background: priorityColors[note.priority] }} />
+                <span className="note-type-label">{note.type}</span>
+                <span className="note-priority-label" style={{ color: priorityColors[note.priority], fontSize: '0.72rem' }}>{priorityLabels[note.priority]}</span>
+              </div>
+              <span className="note-date">{note.date}</span>
+            </div>
+            {editingNoteId === note.id ? (
+              <div style={{ marginTop: '8px' }}>
+                <textarea value={editNoteText} onChange={e => setEditNoteText(e.target.value)} rows="3" className="note-edit-textarea" />
+                <div className="note-actions-row">
+                  <button type="button" className="note-action-btn save-btn" onClick={() => handleSaveEditNote(note.id)}>✅ Save</button>
+                  <button type="button" className="note-action-btn cancel-btn" onClick={() => setEditingNoteId(null)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="note-text">{note.text}</p>
+                {/* Auto seen-receipt from contractor */}
+                {note.seenAt ? (
+                  <div className="note-seen-receipt">
+                    <span className="seen-tick">✅</span>
+                    <span>Seen by Contractor at {note.seenAt}</span>
+                  </div>
+                ) : (
+                  <div className="note-pending-receipt">
+                    <span className="pending-dot" />
+                    <span>Awaiting contractor</span>
+                  </div>
+                )}
+                <div className="note-actions-row" style={{ marginTop: '8px' }}>
+                  <button type="button" className="note-action-btn edit-btn" onClick={() => { setEditingNoteId(note.id); setEditNoteText(note.text); }}>✏️ Edit</button>
+                  <button type="button" className="note-action-btn delete-btn" onClick={() => handleDeleteNote(note.id)}>🗑️ Delete</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1204,9 +1563,32 @@ function ContractorDashboard({
   materials,
   setMaterials,
   workers,
-  setWorkers
+  setWorkers,
+  clientNotes,
+  saveClientNotes
 }) {
   const [activeSubTab, setActiveSubTab] = useState('project'); // 'project' | 'labour' | 'materials' | 'upload' | 'budget'
+  const unreadNotifications = clientNotes.filter(n => !n.readByContractor).length;
+
+  const markAllNotificationsRead = () => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    saveClientNotes(clientNotes.map(n => ({
+      ...n,
+      readByContractor: true,
+      seenAt: n.seenAt || timeStr   // stamp only if not already seen
+    })));
+  };
+
+  const markNotificationRead = (id) => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    saveClientNotes(clientNotes.map(n =>
+      n.id === id
+        ? { ...n, readByContractor: true, seenAt: n.seenAt || timeStr }
+        : n
+    ));
+  };
   
   // Materials Ledger Form States
   const [newMatName, setNewMatName] = useState('');
@@ -1244,6 +1626,26 @@ function ContractorDashboard({
   const [bricksVal, setBricksVal] = useState(costs.bricks);
   const [paintVal, setPaintVal] = useState(costs.paint);
   const [labourVal, setLabourVal] = useState(costs.labourCost);
+  const [contractorExtras, setContractorExtras] = useState([]);
+
+  const handleAddContractorExtra = () => {
+    setContractorExtras(prev => [
+      ...prev,
+      { id: `ext-contractor-new-${Date.now()}-${Math.random()}`, name: '', cost: '' }
+    ]);
+  };
+
+  const handleUpdateContractorExtraName = (id, name) => {
+    setContractorExtras(prev => prev.map(item => item.id === id ? { ...item, name } : item));
+  };
+
+  const handleUpdateContractorExtraCost = (id, cost) => {
+    setContractorExtras(prev => prev.map(item => item.id === id ? { ...item, cost: cost === '' ? '' : parseFloat(cost) || 0 } : item));
+  };
+
+  const handleDeleteContractorExtra = (id) => {
+    setContractorExtras(prev => prev.filter(item => item.id !== id));
+  };
 
   // Load editing details if stats change
   useEffect(() => {
@@ -1257,6 +1659,12 @@ function ContractorDashboard({
     setBricksVal(costs.bricks);
     setPaintVal(costs.paint);
     setLabourVal(costs.labourCost);
+    const initialExtras = Object.entries(costs.extras || {}).map(([name, cost], idx) => ({
+      id: `ext-contractor-${idx}-${Date.now()}`,
+      name,
+      cost
+    }));
+    setContractorExtras(initialExtras);
   }, [costs]);
 
   // Recalculate Active Labour
@@ -1328,10 +1736,10 @@ function ContractorDashboard({
 
     setMaterials(prev => [newMaterial, ...prev]);
 
-    // Recalculate client costs keys
+    // Map material name → costs bucket (or extras)
     const updatedCostsKey = newMatName.toLowerCase();
     setCosts(prevCosts => {
-      let updatedCosts = { ...prevCosts };
+      let updatedCosts = { ...prevCosts, extras: { ...(prevCosts.extras || {}) } };
       if (updatedCostsKey.includes('cement')) {
         updatedCosts.cement = (updatedCosts.cement || 0) + costValue;
       } else if (updatedCostsKey.includes('steel')) {
@@ -1341,7 +1749,8 @@ function ContractorDashboard({
       } else if (updatedCostsKey.includes('paint')) {
         updatedCosts.paint = (updatedCosts.paint || 0) + costValue;
       } else {
-        updatedCosts.bricks = (updatedCosts.bricks || 0) + costValue; 
+        // New custom material → add as its own line item
+        updatedCosts.extras[newMatName] = (updatedCosts.extras[newMatName] || 0) + costValue;
       }
       return updatedCosts;
     });
@@ -1372,14 +1781,22 @@ function ContractorDashboard({
   // Direct Budget & Cost Save Form
   const saveCostsEdit = (e) => {
     e.preventDefault();
-    setCosts({
-      totalBudget: parseFloat(budgetVal) || 0,
-      cement: parseFloat(cementVal) || 0,
-      steel: parseFloat(steelVal) || 0,
-      bricks: parseFloat(bricksVal) || 0,
-      paint: parseFloat(paintVal) || 0,
-      labourCost: parseFloat(labourVal) || 0
+    const newExtras = {};
+    contractorExtras.forEach(item => {
+      if (item.name.trim()) {
+        newExtras[item.name.trim()] = parseFloat(item.cost) || 0;
+      }
     });
+
+    setCosts(prev => ({
+      totalBudget: parseFloat(budgetVal) || 0,
+      cement:      parseFloat(cementVal) || 0,
+      steel:       parseFloat(steelVal)  || 0,
+      bricks:      parseFloat(bricksVal) || 0,
+      paint:       parseFloat(paintVal)  || 0,
+      labourCost:  parseFloat(labourVal) || 0,
+      extras:      newExtras
+    }));
     addTimelineEvent({
       status: 'Costs Updated',
       description: 'Site manager adjusted itemized ledger costs.'
@@ -1442,6 +1859,9 @@ function ContractorDashboard({
             onClick={() => setActiveSubTab('project')}
           >
             📋 Site Info & Logs
+            {unreadNotifications > 0 && (
+              <span className="notif-badge">{unreadNotifications}</span>
+            )}
           </button>
           <button
             type="button"
@@ -1653,6 +2073,63 @@ function ContractorDashboard({
                     Broadcast to Client
                   </button>
                 </form>
+              </div>
+
+              {/* ── CLIENT NOTIFICATIONS PANEL ─────────────────────────── */}
+              <div className="glass-card contractor-notif-card" style={{ marginTop: '24px' }}>
+                <div className="card-header-row">
+                  <div>
+                    <h2 className="card-heading-title">
+                      🔔 Client Messages
+                      {unreadNotifications > 0 && (
+                        <span className="notif-badge notif-badge-inline">{unreadNotifications} new</span>
+                      )}
+                    </h2>
+                    <span className="card-heading-subtitle">Notes & requests sent by your client</span>
+                  </div>
+                  {unreadNotifications > 0 && (
+                    <button
+                      type="button"
+                      className="add-content-btn"
+                      style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+                      onClick={markAllNotificationsRead}
+                    >
+                      ✓ Mark All Read
+                    </button>
+                  )}
+                </div>
+
+                <div className="contractor-notif-list">
+                  {clientNotes.length === 0 && (
+                    <div className="empty-state-notice">No messages from client yet.</div>
+                  )}
+                  {clientNotes.map(note => {
+                    const priorityColors = { high: '#f43f5e', medium: '#f59e0b', low: '#10b981' };
+                    const priorityLabels = { high: '🔴 High', medium: '🟡 Medium', low: '🟢 Low' };
+                    return (
+                      <div
+                        key={note.id}
+                        className={`contractor-notif-item ${!note.readByContractor ? 'unread' : ''}`}
+                        onClick={() => markNotificationRead(note.id)}
+                      >
+                        <div className="notif-item-header">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {!note.readByContractor && <span className="notif-unread-dot" />}
+                            <span className="note-type-label">{note.type}</span>
+                            <span style={{ color: priorityColors[note.priority], fontSize: '0.72rem', fontWeight: 600 }}>
+                              {priorityLabels[note.priority]}
+                            </span>
+                          </div>
+                          <span className="note-date">{note.date}</span>
+                        </div>
+                        <p className="notif-item-text">{note.text}</p>
+                        {!note.readByContractor && (
+                          <div className="notif-click-hint">Click to mark as read</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -1898,6 +2375,52 @@ function ContractorDashboard({
                       />
                     </div>
                   </div>
+
+                  <div className="custom-items-edit-section">
+                    <h4 className="custom-items-edit-title">📦 Custom Extras Ledger</h4>
+                    {contractorExtras.length === 0 ? (
+                      <p className="no-custom-items-notice">No custom items added yet.</p>
+                    ) : (
+                      <div className="custom-items-edit-list">
+                        {contractorExtras.map((item) => (
+                          <div key={item.id} className="custom-item-edit-row">
+                            <input
+                              type="text"
+                              placeholder="Item Name (e.g. Sand)"
+                              value={item.name}
+                              onChange={(e) => handleUpdateContractorExtraName(item.id, e.target.value)}
+                              className="custom-item-name-input"
+                              required
+                            />
+                            <input
+                              type="number"
+                              placeholder="Cost (₹)"
+                              value={item.cost}
+                              onChange={(e) => handleUpdateContractorExtraCost(item.id, e.target.value)}
+                              className="custom-item-cost-input"
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="delete-custom-item-btn"
+                              onClick={() => handleDeleteContractorExtra(item.id)}
+                              title="Remove Item"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className="add-custom-item-btn"
+                      onClick={handleAddContractorExtra}
+                    >
+                      ➕ Add Custom Item
+                    </button>
+                  </div>
+
                   <button type="submit" className="auth-submit-btn" style={{ height: '44px', marginTop: '16px' }}>
                     Save Ledger Updates & Push to Client
                   </button>
@@ -1910,11 +2433,28 @@ function ContractorDashboard({
                 <h2 className="card-heading-title">📈 Current Aggregated Total</h2>
                 <div className="labour-big-stat" style={{ textAlign: 'center', margin: '20px 0' }}>
                   <span className="large-count" style={{ fontSize: '2.5rem' }}>
-                    ₹{(parseFloat(cementVal) + parseFloat(steelVal) + parseFloat(bricksVal) + parseFloat(paintVal) + parseFloat(labourVal)).toLocaleString('en-IN')}
+                    ₹{(
+                      parseFloat(cementVal) + parseFloat(steelVal) + parseFloat(bricksVal) +
+                      parseFloat(paintVal) + parseFloat(labourVal) +
+                      Object.values(costs.extras || {}).reduce((s, v) => s + v, 0)
+                    ).toLocaleString('en-IN')}
                   </span>
                   <span className="large-lbl">Total Expenses Accumulated</span>
                 </div>
-                <div className="site-details-read-mode" style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                {Object.keys(costs.extras || {}).length > 0 && (
+                  <div className="cost-breakdown-list" style={{ marginTop: '0' }}>
+                    <h3 className="breakdown-subtitle">📦 Custom Items</h3>
+                    <ul className="itemized-ul">
+                      {Object.entries(costs.extras || {}).map(([name, val]) => (
+                        <li key={name} className="itemized-li itemized-li-new">
+                          <span className="item-name">{name}</span>
+                          <span className="item-cost">₹{val.toLocaleString('en-IN')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="site-details-read-mode" style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '12px' }}>
                   <p>💡 Setting values here overrides materials inventory calculations and updates client budget tracking instantly.</p>
                 </div>
               </div>
